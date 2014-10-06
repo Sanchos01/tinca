@@ -5,7 +5,9 @@ defmodule TincaTest do
   test "the truth" do
 
   	Tinca.declare_namespaces
-  	Tinca.put("value", :key)
-    assert Tinca.get(:key) == "value"
+  	"value" = Tinca.put("value", :key)
+  	"value" = Tinca.get(:key)
+  	:ok = Tinca.delete(:key)
+    assert Tinca.get(:key) == :not_found
   end
 end

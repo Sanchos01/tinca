@@ -24,65 +24,65 @@ defmodule Tinca do
           raise "Tinca : can't create table #{inspect namespace}, namespace must be atom!"
         end
       end )
+    regular_put_func = quote do
+                          def put(value, key, namespace) when (is_atom(key) and (namespace in unquote(namespaces))) do
+                              case table_exist?(namespace) do
+                                true -> true = :ets.insert(namespace, {key,value})
+                                        value
+                                false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
+                              end
+                          end
+                          def put(value, key, namespace) do
+                            raise "Tinca : #{inspect key} is not atom or namespace #{inspect namespace} was not declarated for this app. Can't put value #{inspect value}."
+                          end
+                        end
+    regular_get_func = quote do
+                          def get(key, namespace) when (is_atom(key) and (namespace in unquote(namespaces))) do
+                              case table_exist?(namespace) do
+                                true -> case :ets.lookup(namespace, key) do
+                                          [{ _ , data}] -> data
+                                          _ -> :not_found
+                                        end
+                                false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
+                              end
+                          end
+                          def get(key, namespace) do
+                            raise "Tinca : #{inspect key} is not atom or namespace #{inspect namespace} was not declarated for this app. Can't get value."
+                          end
+                        end
+    regular_del_func = quote do
+                          def delete(key, namespace) when (is_atom(key) and (namespace in unquote(namespaces))) do
+                              case table_exist?(namespace) do
+                                true -> true = :ets.delete(namespace, key)
+                                        :ok
+                                false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
+                              end
+                          end
+                          def delete(key, namespace) do
+                            raise "Tinca : #{inspect key} is not atom or namespace #{inspect namespace} was not declarated for this app. Can't get value."
+                          end
+                        end
+
     put_funcs = case namespaces do
                   [namespace] ->  quote do
-                                    def put(value, key) when is_atom(key) do
-                                        case table_exist?(unquote(namespace)) do
-                                          true -> true = :ets.insert(unquote(namespace), {key,value})
-                                                  value
-                                          false -> raise "Tinca : table #{inspect unquote(namespace)} is not exist! Was it declarated?"
-                                        end
-                                    end
-                                    def put(value, key, unquote(namespace)) when is_atom(key) do
-                                        case table_exist?(unquote(namespace)) do
-                                          true -> true = :ets.insert(unquote(namespace), {key,value})
-                                                  value
-                                          false -> raise "Tinca : table #{inspect unquote(namespace)} is not exist! Was it declarated?"
-                                        end
-                                    end
+                                    def put(value, key, namespace \\ unquote(namespace) )
+                                    unquote(regular_put_func)
                                   end
-                  namespaces -> quote do
-                                  def put(value, key, namespace) when is_atom(key) and (namespace in unquote(namespaces)) do
-                                      case table_exist?(namespace) do
-                                        true -> true = :ets.insert(namespace, {key,value})
-                                                value
-                                        false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
-                                      end
-                                  end
-                                end
+                  ^namespaces ->  regular_put_func
                 end
     get_funcs = case namespaces do
-                  [namespace] -> quote do
-                                    def get(key) when is_atom(key) do
-                                        case table_exist?(unquote(namespace)) do
-                                          true -> case :ets.lookup(unquote(namespace), key) do
-                                                    [{ _ , data}] -> data
-                                                    _ -> :not_found
-                                                  end
-                                          false -> raise "Tinca : table #{inspect unquote(namespace)} is not exist! Was it declarated?"
-                                        end
-                                    end
-                                    def get(key, unquote(namespace)) when is_atom(key) do
-                                        case table_exist?(unquote(namespace)) do
-                                          true -> case :ets.lookup(unquote(namespace), key) do
-                                                    [{ _ , data}] -> data
-                                                    _ -> :not_found
-                                                  end
-                                          false -> raise "Tinca : table #{inspect unquote(namespace)} is not exist! Was it declarated?"
-                                        end
-                                    end
+                  [namespace] ->  quote do
+                                    def get(key, namespace \\ unquote(namespace) )
+                                    unquote(regular_get_func)
                                   end
-                  namespaces -> quote do
-                                  def get(key, namespace) when is_atom(key) and (namespace in unquote(namespaces)) do
-                                      case table_exist?(namespace) do
-                                        true -> case :ets.lookup(namespace, key) do
-                                                  [{ _ , data}] -> data
-                                                  _ -> :not_found
-                                                end
-                                        false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
-                                      end
+                  ^namespaces ->  regular_get_func
+                end
+    del_funcs = case namespaces do
+                  [namespace] ->  quote do
+                                    def delete(key, namespace \\ unquote(namespace) )
+                                    unquote(regular_del_func)
                                   end
-                                end
+                  ^namespaces ->  regular_del_func
                 end
 
     quote do
@@ -94,6 +94,7 @@ defmodule Tinca do
 
         unquote(put_funcs)
         unquote(get_funcs)
+        unquote(del_funcs)
 
         def declare_namespaces do
             Enum.each( unquote(namespaces),
@@ -110,7 +111,7 @@ defmodule Tinca do
         ###############
 
         defp create_table(namespace) do
-          :ets.new(namespace, [:public, :named_table, {:write_concurrency, true}, {:read_concurrency, true}, :protected])
+          namespace = :ets.new(namespace, [:public, :named_table, {:write_concurrency, true}, {:read_concurrency, true}, :protected])
         end
         defp table_exist?(namespace) do
           :ets.info(namespace) != :undefined

@@ -1,7 +1,10 @@
 Tinca
 =====
 
-** TODO: Add description **
+
+#
+#	TODO : add "delete" function
+#
 
 usage:
 
