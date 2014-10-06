@@ -10,7 +10,7 @@ usage:
 defmodule SomeApp do
 
   use Application
-  use TincaMacro, [:namespace_1, :namespace_2]
+  use Tinca, [:namespace_1, :namespace_2]
 
   def start(_type, _args) do
 	  ...
