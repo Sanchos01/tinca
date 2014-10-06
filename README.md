@@ -1,11 +1,6 @@
 Tinca
 =====
 
-
-#
-#	TODO : add "delete" function
-#
-
 usage:
 
 1) in start/2 function of your app declare namespaces
@@ -27,6 +22,8 @@ defmodule SomeApp do
 SomeApp.Tinca.put("value", :key, :namespace_1) # => "value"
 SomeApp.Tinca.get(:key, :namespace_1) # => "value"
 SomeApp.Tinca.get(:not_existing_key, :namespace_1) # => :not_found
+SomeApp.Tinca.delete(:key, :namespace_1) # => :ok
+SomeApp.Tinca.get(:key, :namespace_1) # => :not_found
 
 SomeApp.Tinca.get(:some_key, :not_declared_in_this_app_namespace) => exception
 ```
