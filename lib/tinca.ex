@@ -6,7 +6,6 @@ defmodule Tinca do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
-    create_table(:global_tinca_namespace)
     create_declared_tables
 
     children = [
@@ -54,7 +53,20 @@ defmodule Tinca do
   ###############
 
   defp create_declared_tables do
-    declared_tables = :application.get_all_env(:tinca)[:namespaces] |> IO.inspect
+    :application.get_all_env(:tinca)[:namespaces]
+      |> Enum.map( fn(table_name) -> 
+                    case is_atom(table_name) do
+                      true -> table_name
+                      false -> "Tinca : can't create table #{inspect table_name}, namespace must be atom!"
+                    end
+                  end )
+      |> Enum.each( 
+          fn(table_name) ->
+            case table_exist?(table_name) do
+              false -> create_table(table_name)
+              true -> raise "Tinca : can't create table #{inspect table_name}, it is already exist! Maybe it was declarated in deps of your app?"
+            end
+          end )
   end
 
   defp create_table(namspace) do

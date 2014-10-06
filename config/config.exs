@@ -16,7 +16,7 @@ use Mix.Config
 #       metadata: [:user_id]
 
 	config :tinca,
-		namespaces: []
+		namespaces: [:global_tinca_namespace]
 
 # It is also possible to import configuration files, relative to this
 # directory. For example, you can emulate configuration per environment
