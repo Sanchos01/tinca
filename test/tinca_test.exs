@@ -1,7 +1,11 @@
 defmodule TincaTest do
   use ExUnit.Case
+  use Tinca, [:namespace1]
 
   test "the truth" do
-    assert 1 + 1 == 2
+
+  	Tinca.declare_namespaces
+  	Tinca.put("value", :key)
+    assert Tinca.get(:key) == "value"
   end
 end
