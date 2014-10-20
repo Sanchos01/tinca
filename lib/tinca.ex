@@ -25,7 +25,7 @@ defmodule Tinca do
         end
       end )
     regular_put_func = quote do
-                          def put(value, key, namespace) when (is_atom(key) and (namespace in unquote(namespaces))) do
+                          def put(value, key, namespace) when ( ( is_atom(key) or is_binary(key) or is_number(key) ) and (namespace in unquote(namespaces))) do
                               case table_exist?(namespace) do
                                 true -> true = :ets.insert(namespace, {key,value})
                                         value
@@ -33,11 +33,11 @@ defmodule Tinca do
                               end
                           end
                           def put(value, key, namespace) do
-                            raise "Tinca : #{inspect key} is not atom or namespace #{inspect namespace} was not declarated for this app. Can't put value #{inspect value}."
+                            raise "Tinca : #{inspect key} is not atom, binary or number, or namespace #{inspect namespace} was not declarated for this app. Can't put value #{inspect value}."
                           end
                         end
     regular_get_func = quote do
-                          def get(key, namespace) when (is_atom(key) and (namespace in unquote(namespaces))) do
+                          def get(key, namespace) when ( ( is_atom(key) or is_binary(key) or is_number(key) ) and (namespace in unquote(namespaces))) do
                               case table_exist?(namespace) do
                                 true -> case :ets.lookup(namespace, key) do
                                           [{ _ , data}] -> data
@@ -47,11 +47,11 @@ defmodule Tinca do
                               end
                           end
                           def get(key, namespace) do
-                            raise "Tinca : #{inspect key} is not atom or namespace #{inspect namespace} was not declarated for this app. Can't get value."
+                            raise "Tinca : #{inspect key} is not atom, binary or number, or namespace #{inspect namespace} was not declarated for this app. Can't get value."
                           end
                         end
     regular_del_func = quote do
-                          def delete(key, namespace) when (is_atom(key) and (namespace in unquote(namespaces))) do
+                          def delete(key, namespace) when ( ( is_atom(key) or is_binary(key) or is_number(key) ) and (namespace in unquote(namespaces))) do
                               case table_exist?(namespace) do
                                 true -> true = :ets.delete(namespace, key)
                                         :ok
@@ -59,7 +59,7 @@ defmodule Tinca do
                               end
                           end
                           def delete(key, namespace) do
-                            raise "Tinca : #{inspect key} is not atom or namespace #{inspect namespace} was not declarated for this app. Can't get value."
+                            raise "Tinca : #{inspect key} is not atom, binary or number, or namespace #{inspect namespace} was not declarated for this app. Can't get value."
                           end
                         end
 
