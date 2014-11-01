@@ -37,11 +37,18 @@ defmodule Tinca do
                           end
                         end
     regular_get_func = quote do
+                          def get([key], namespace) do
+                            get(key, namespace)
+                          end
+                          def get([first|rest], namespace) do
+                            get(first, namespace)
+                              |> HashUtils.get(rest)
+                          end
                           def get(key, namespace) when ( ( is_atom(key) or is_binary(key) or is_number(key) ) and (namespace in unquote(namespaces))) do
                               case table_exist?(namespace) do
                                 true -> case :ets.lookup(namespace, key) do
                                           [{ _ , data}] -> data
-                                          _ -> :not_found
+                                          _ -> nil
                                         end
                                 false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
                               end
@@ -50,6 +57,17 @@ defmodule Tinca do
                             raise "Tinca : #{inspect key} is not atom, binary or number, or namespace #{inspect namespace} was not declarated for this app. Can't get value."
                           end
                         end
+
+    regular_getall_func = quote do
+                            def getall(namespace) do
+                              case table_exist?(namespace) do
+                                true -> :ets.tab2list(namespace)
+                                          |> HashUtils.to_map
+                                false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
+                              end
+                            end
+                          end
+
     regular_del_func = quote do
                           def delete(key, namespace) when ( ( is_atom(key) or is_binary(key) or is_number(key) ) and (namespace in unquote(namespaces))) do
                               case table_exist?(namespace) do
@@ -63,27 +81,25 @@ defmodule Tinca do
                           end
                         end
 
-    put_funcs = case namespaces do
+
+    funcs = case namespaces do
                   [namespace] ->  quote do
                                     def put(value, key, namespace \\ unquote(namespace) )
                                     unquote(regular_put_func)
-                                  end
-                  ^namespaces ->  regular_put_func
-                end
-    get_funcs = case namespaces do
-                  [namespace] ->  quote do
                                     def get(key, namespace \\ unquote(namespace) )
                                     unquote(regular_get_func)
-                                  end
-                  ^namespaces ->  regular_get_func
-                end
-    del_funcs = case namespaces do
-                  [namespace] ->  quote do
+                                    def getall(namespace \\ unquote(namespace) )
+                                    unquote(regular_getall_func)
                                     def delete(key, namespace \\ unquote(namespace) )
                                     unquote(regular_del_func)
                                   end
-                  ^namespaces ->  regular_del_func
-                end
+                  ^namespaces ->  quote do
+                                    unquote(regular_put_func)
+                                    unquote(regular_get_func)
+                                    unquote(regular_getall_func)
+                                    unquote(regular_del_func)
+                                  end
+            end
 
     quote do
       defmodule Tinca do
@@ -92,9 +108,7 @@ defmodule Tinca do
         ### public ####
         ###############
 
-        unquote(put_funcs)
-        unquote(get_funcs)
-        unquote(del_funcs)
+        unquote(funcs)
 
         def declare_namespaces do
             Enum.each( unquote(namespaces),
