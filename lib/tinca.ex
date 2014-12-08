@@ -81,6 +81,18 @@ defmodule Tinca do
                           end
                         end
 
+    regular_cleanup_func = quote do
+                            def cleanup(namespace) when (namespace in unquote(namespaces)) do
+                                case table_exist?(namespace) do
+                                  true -> true = :ets.delete_all_objects(namespace)
+                                          :ok
+                                  false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
+                                end
+                            end
+                            def cleanup(namespace) do
+                              raise "Tinca : namespace #{inspect namespace} was not declarated for this app. Can't do cleanup."
+                            end
+                          end
 
     funcs = case namespaces do
                   [namespace] ->  quote do
@@ -92,12 +104,15 @@ defmodule Tinca do
                                     unquote(regular_getall_func)
                                     def delete(key, namespace \\ unquote(namespace) )
                                     unquote(regular_del_func)
+                                    def cleanup(namespace \\ unquote(namespace))
+                                    unquote(regular_cleanup_func)
                                   end
                   ^namespaces ->  quote do
                                     unquote(regular_put_func)
                                     unquote(regular_get_func)
                                     unquote(regular_getall_func)
                                     unquote(regular_del_func)
+                                    unquote(regular_cleanup_func)
                                   end
             end
 

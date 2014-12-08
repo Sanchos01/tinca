@@ -19,5 +19,10 @@ defmodule TincaTest do
     assert "value" == Tinca.put("value", :k1)
     assert "value2" == Tinca.put("value2", "k2")
     assert %{"k2" => "value2", :k1 => "value"} == Tinca.getall
+    Tinca.cleanup(:namespace1)
+    assert %{} == Tinca.getall
+    Tinca.put("value", :k1)
+    Tinca.cleanup
+    assert %{} == Tinca.getall
   end
 end
