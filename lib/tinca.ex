@@ -68,6 +68,27 @@ defmodule Tinca do
                             end
                           end
 
+    regular_keys_func =   quote do
+                            def keys(namespace) do
+                              case table_exist?(namespace) do
+                                true -> :ets.tab2list(namespace)
+                                          |> Enum.map(fn({k,_}) -> k end)
+                                false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
+                              end
+                            end
+                          end
+
+
+    regular_values_func = quote do
+                            def values(namespace) do
+                              case table_exist?(namespace) do
+                                true -> :ets.tab2list(namespace)
+                                          |> Enum.map(fn({_,v}) -> v end)
+                                false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
+                              end
+                            end
+                          end
+
     regular_del_func = quote do
                           def delete(key, namespace) when ( ( is_atom(key) or is_binary(key) or is_number(key) ) and (namespace in unquote(namespaces))) do
                               case table_exist?(namespace) do
@@ -106,6 +127,10 @@ defmodule Tinca do
                                     unquote(regular_del_func)
                                     def cleanup(namespace \\ unquote(namespace))
                                     unquote(regular_cleanup_func)
+                                    def keys(namespace \\ unquote(namespace))
+                                    unquote(regular_keys_func)
+                                    def values(namespace \\ unquote(namespace))
+                                    unquote(regular_values_func)
                                   end
                   ^namespaces ->  quote do
                                     unquote(regular_put_func)
@@ -113,6 +138,8 @@ defmodule Tinca do
                                     unquote(regular_getall_func)
                                     unquote(regular_del_func)
                                     unquote(regular_cleanup_func)
+                                    unquote(regular_keys_func)
+                                    unquote(regular_values_func)
                                   end
             end
 
