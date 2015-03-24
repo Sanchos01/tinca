@@ -114,6 +114,23 @@ defmodule Tinca do
                               raise "Tinca : namespace #{inspect namespace} was not declarated for this app. Can't do cleanup."
                             end
                           end
+    regular_iterate = quote do
+                        def iterate(lambda, namespace) when (is_function(lambda, 1) and (namespace in unquote(namespaces))) do
+                          iterate_proc(namespace, :ets.first(namespace), lambda)
+                        end
+                        def iterate(_, namespace) do
+                          raise "Tinca : namespace #{inspect namespace} was not declarated for this app or first arg is not a function."
+                        end
+                      end
+
+    regular_iterate_acc = quote do
+                            def iterate_acc(acc, lambda, namespace) when (is_function(lambda, 2) and (namespace in unquote(namespaces))) do
+                              iterate_acc_proc(namespace, :ets.first(namespace), lambda, acc)
+                            end
+                            def iterate_acc(_, _, namespace) do
+                              raise "Tinca : namespace #{inspect namespace} was not declarated for this app or first arg is not a function."
+                            end
+                          end
 
     funcs = case namespaces do
                   [namespace] ->  quote do
@@ -131,6 +148,10 @@ defmodule Tinca do
                                     unquote(regular_keys_func)
                                     def values(namespace \\ unquote(namespace))
                                     unquote(regular_values_func)
+                                    def iterate(lambda, namespace \\ unquote(namespace))
+                                    unquote(regular_iterate)
+                                    def iterate_acc(acc, lambda, namespace \\ unquote(namespace))
+                                    unquote(regular_iterate_acc)
                                   end
                   ^namespaces ->  quote do
                                     unquote(regular_put_func)
@@ -140,6 +161,8 @@ defmodule Tinca do
                                     unquote(regular_cleanup_func)
                                     unquote(regular_keys_func)
                                     unquote(regular_values_func)
+                                    unquote(regular_iterate)
+                                    unquote(regular_iterate_acc)
                                   end
             end
 
@@ -167,10 +190,27 @@ defmodule Tinca do
         ###############
 
         defp create_table(namespace) do
-          namespace = :ets.new(namespace, [:public, :named_table, {:write_concurrency, true}, {:read_concurrency, true}, :protected])
+          namespace = :ets.new(namespace, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected])
         end
         defp table_exist?(namespace) do
           :ets.info(namespace) != :undefined
+        end
+
+        defp iterate_proc(_, :'$end_of_table', _), do: :ok
+        defp iterate_proc(tab, key, lambda) do
+          case get(key, tab) do
+            nil -> :ok
+            some -> lambda.({key, some})
+          end
+          iterate_proc(tab, :ets.next(tab, key), lambda)
+        end
+
+        defp iterate_acc_proc(_, :'$end_of_table', _, acc), do: acc
+        defp iterate_acc_proc(tab, key, lambda, acc) do
+          case get(key, tab) do
+            nil -> iterate_acc_proc(tab, :ets.next(tab, key), lambda, acc)
+            some -> iterate_acc_proc(tab, :ets.next(tab, key), lambda, lambda.({key, some}, acc))
+          end
         end
 
       end

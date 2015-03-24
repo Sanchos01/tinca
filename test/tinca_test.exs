@@ -28,5 +28,9 @@ defmodule TincaTest do
     assert %{} == Tinca.getall
     assert [] == Tinca.keys
     assert [] == Tinca.values
+    assert [1,2,3] == [1,2,3] |> Enum.map(&(Tinca.put(&1,&1)))
+    assert :ok == Tinca.iterate(fn({k,v}) -> Tinca.put(v*2, k) end)
+    assert [2,4,6] == Tinca.values
+    assert %{1 => 2, 2 => 4, 3 => 6} == Tinca.iterate_acc(%{}, fn({k,v}, acc) -> Map.put(acc, k, v) end)
   end
 end
