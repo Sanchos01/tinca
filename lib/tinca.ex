@@ -37,13 +37,8 @@ defmodule Tinca do
                           end
                         end
     regular_get_func = quote do
-                          def get([key], namespace) do
-                            get(key, namespace)
-                          end
-                          def get([first|rest], namespace) do
-                            get(first, namespace)
-                              |> HashUtils.get(rest)
-                          end
+                          def get([key], namespace), do: get(key, namespace)
+                          def get([first|rest], namespace), do: get(first, namespace) |> HashUtils.get(rest)
                           def get(key, namespace) when ( ( is_atom(key) or is_binary(key) or is_number(key) ) and (namespace in unquote(namespaces))) do
                               case table_exist?(namespace) do
                                 true -> case :ets.lookup(namespace, key) do
@@ -61,8 +56,7 @@ defmodule Tinca do
     regular_getall_func = quote do
                             def getall(namespace) do
                               case table_exist?(namespace) do
-                                true -> :ets.tab2list(namespace)
-                                          |> HashUtils.to_map
+                                true -> :ets.tab2list(namespace) |> HashUtils.to_map
                                 false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
                               end
                             end
@@ -71,8 +65,7 @@ defmodule Tinca do
     regular_keys_func =   quote do
                             def keys(namespace) do
                               case table_exist?(namespace) do
-                                true -> :ets.tab2list(namespace)
-                                          |> Enum.map(fn({k,_}) -> k end)
+                                true -> keys_proc(namespace, :ets.first(namespace), [])
                                 false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
                               end
                             end
@@ -82,8 +75,7 @@ defmodule Tinca do
     regular_values_func = quote do
                             def values(namespace) do
                               case table_exist?(namespace) do
-                                true -> :ets.tab2list(namespace)
-                                          |> Enum.map(fn({_,v}) -> v end)
+                                true -> :ets.foldl(fn({_,v}, acc) -> [v|acc] end, [], namespace)
                                 false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
                               end
                             end
@@ -116,7 +108,8 @@ defmodule Tinca do
                           end
     regular_iterate = quote do
                         def iterate(lambda, namespace) when (is_function(lambda, 1) and (namespace in unquote(namespaces))) do
-                          iterate_proc(namespace, :ets.first(namespace), lambda)
+                          :ets.foldl(fn(el, _) -> lambda.(el) end , nil, namespace)
+                          :ok
                         end
                         def iterate(_, namespace) do
                           raise "Tinca : namespace #{inspect namespace} was not declarated for this app or first arg is not a function."
@@ -125,7 +118,7 @@ defmodule Tinca do
 
     regular_iterate_acc = quote do
                             def iterate_acc(acc, lambda, namespace) when (is_function(lambda, 2) and (namespace in unquote(namespaces))) do
-                              iterate_acc_proc(namespace, :ets.first(namespace), lambda, acc)
+                              :ets.foldl(lambda, acc, namespace)
                             end
                             def iterate_acc(_, _, namespace) do
                               raise "Tinca : namespace #{inspect namespace} was not declarated for this app or first arg is not a function."
@@ -196,22 +189,8 @@ defmodule Tinca do
           :ets.info(namespace) != :undefined
         end
 
-        defp iterate_proc(_, :'$end_of_table', _), do: :ok
-        defp iterate_proc(tab, key, lambda) do
-          case get(key, tab) do
-            nil -> :ok
-            some -> lambda.({key, some})
-          end
-          iterate_proc(tab, :ets.next(tab, key), lambda)
-        end
-
-        defp iterate_acc_proc(_, :'$end_of_table', _, acc), do: acc
-        defp iterate_acc_proc(tab, key, lambda, acc) do
-          case get(key, tab) do
-            nil -> iterate_acc_proc(tab, :ets.next(tab, key), lambda, acc)
-            some -> iterate_acc_proc(tab, :ets.next(tab, key), lambda, lambda.({key, some}, acc))
-          end
-        end
+        defp keys_proc(_, :'$end_of_table', acc), do: acc
+        defp keys_proc(tab, key, acc), do: keys_proc(tab, :ets.next(tab, key), [key|acc])
 
       end
     end

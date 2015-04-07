@@ -19,8 +19,8 @@ defmodule TincaTest do
     assert "value" == Tinca.put("value", :k1)
     assert "value2" == Tinca.put("value2", "k2")
     assert %{"k2" => "value2", :k1 => "value"} == Tinca.getall
-    assert [:k1, "k2"] == Tinca.keys
-    assert ["value", "value2"] == Tinca.values
+    assert ["k2", :k1] == Tinca.keys
+    assert ["value2", "value"] == Tinca.values
     Tinca.cleanup(:namespace1)
     assert %{} == Tinca.getall
     Tinca.put("value", :k1)
@@ -30,7 +30,7 @@ defmodule TincaTest do
     assert [] == Tinca.values
     assert [1,2,3] == [1,2,3] |> Enum.map(&(Tinca.put(&1,&1)))
     assert :ok == Tinca.iterate(fn({k,v}) -> Tinca.put(v*2, k) end)
-    assert [2,4,6] == Tinca.values
+    assert [6,4,2] == Tinca.values
     assert %{1 => 2, 2 => 4, 3 => 6} == Tinca.iterate_acc(%{}, fn({k,v}, acc) -> Map.put(acc, k, v) end)
   end
 end
