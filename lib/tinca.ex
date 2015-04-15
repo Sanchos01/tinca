@@ -183,7 +183,7 @@ defmodule Tinca do
         ###############
 
         defp create_table(namespace) do
-          namespace = :ets.new(namespace, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected])
+          true = (namespace == :ets.new(namespace, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
         end
         defp table_exist?(namespace) do
           :ets.info(namespace) != :undefined
