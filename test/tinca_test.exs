@@ -2,8 +2,7 @@ defmodule TincaTest do
   use ExUnit.Case
   use Tinca, [:namespace1]
 
-  test "the truth" do
-
+  test "test storage" do
   	Tinca.declare_namespaces
   	assert "value" == Tinca.put("value", :key)
   	assert "value" == Tinca.get(:key)
@@ -33,4 +32,12 @@ defmodule TincaTest do
     assert [6,4,2] == Tinca.values
     assert %{1 => 2, 2 => 4, 3 => 6} == Tinca.iterate_acc(%{}, fn({k,v}, acc) -> Map.put(acc, k, v) end)
   end
+
+  test "memo" do
+    :ok = Tinca.memo(&IO.puts/1, ["execute two times"], :timer.seconds(5))
+    Enum.each(0..100, fn(_) -> :ok = Tinca.memo(&IO.puts/1, ["execute two times"], :timer.seconds(5)) end)
+    :timer.sleep(:timer.seconds(6))
+    assert :ok == Tinca.memo(&IO.puts/1, ["execute two times"], :timer.seconds(5))
+  end
+
 end

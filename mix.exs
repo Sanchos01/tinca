@@ -14,7 +14,11 @@ defmodule Tinca.Mixfile do
   def application do
     [applications:  [
                       :logger,
-                      :hashex
+                      :exactor,
+
+                      :hashex,
+                      :exutils,
+                      :silverb
                     ],
      mod: {Tinca, []}]
   end
@@ -29,6 +33,11 @@ defmodule Tinca.Mixfile do
   #
   # Type `mix help deps` for more examples and options
   defp deps do
-    [{:hashex, github: "timCF/hashex"}]
+    [
+      {:exactor, github: "sasa1977/exactor", tag: "0467f8100bc735405d597dbf94996195eb31e0b6", override: true},
+      {:hashex, github: "timCF/hashex"},
+      {:exutils, github: "timCF/exutils"},
+      {:silverb, github: "timCF/silverb"}
+    ]
   end
 end

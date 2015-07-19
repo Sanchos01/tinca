@@ -1,20 +1,37 @@
 defmodule Tinca do
   use Application
+  use Silverb, [{"@memo_tab", :__tinca__memo__}]
 
   # See http://elixir-lang.org/docs/stable/elixir/Application.html
   # for more information on OTP Applications
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
+    true = (@memo_tab == :ets.new(@memo_tab, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
 
     children = [
       # Define workers and child supervisors to be supervised
       # worker(Tinca.Worker, [arg1, arg2, arg3])
+      worker(Tinca.GC, [])
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Tinca.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  #
+  # public
+  #
+
+  def memo(func, args, ttl) do
+    key = {func, args}
+    case :ets.lookup(@memo_tab, key) do
+      [{^key, {data, _}}] -> data
+      [] -> data = :erlang.apply(func, args) 
+            true = :ets.insert(@memo_tab, {key, {data, (Exutils.makestamp + ttl)}})
+            data
+    end
   end
 
   defmacro __using__(namespaces) when is_list(namespaces) do
@@ -43,7 +60,7 @@ defmodule Tinca do
                               case table_exist?(namespace) do
                                 true -> case :ets.lookup(namespace, key) do
                                           [{ _ , data}] -> data
-                                          _ -> nil
+                                          [] -> nil
                                         end
                                 false -> raise "Tinca : table #{inspect namespace} is not exist! Was it declarated?"
                               end
@@ -162,6 +179,8 @@ defmodule Tinca do
     quote do
       defmodule Tinca do
 
+        use Silverb, [{"@memo_tab", :__tinca__memo__}]
+        
         ###############
         ### public ####
         ###############
@@ -176,6 +195,16 @@ defmodule Tinca do
                     true -> raise "Tinca : can't create table #{inspect table_name}, it is already exist! Maybe it was declarated in deps of your app?"
                   end
                 end )
+        end
+
+        def memo(func, args, ttl) do
+          key = {func, args}
+          case :ets.lookup(@memo_tab, key) do
+            [{^key, {data, _}}] -> data
+            [] -> data = :erlang.apply(func, args) 
+                  true = :ets.insert(@memo_tab, {key, {data, (Exutils.makestamp + ttl)}})
+                  data
+          end
         end
 
         ###############
