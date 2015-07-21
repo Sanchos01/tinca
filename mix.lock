@@ -1,7 +1,5 @@
-%{"conform": {:hex, :conform, "0.13.0"},
-  "exactor": {:git, "git://github.com/sasa1977/exactor.git", "0467f8100bc735405d597dbf94996195eb31e0b6", [tag: "0467f8100bc735405d597dbf94996195eb31e0b6"]},
-  "exrm": {:git, "git://github.com/bitwalker/exrm.git", "bebc97c7707b6019a2790132b16653418f25afdc", [tag: "bebc97c7707b6019a2790132b16653418f25afdc"]},
-  "extask": {:git, "git://github.com/timCF/extask.git", "4164dddf3135c44623d77e9cba07324595353d6b", []},
-  "exutils": {:git, "git://github.com/timCF/exutils.git", "06c4144ba17ca1f4e83da5cf94859dfa2a38800b", []},
-  "hashex": {:git, "git://github.com/timCF/hashex.git", "e657aac2f6dac000fa940b884e955cbd099009f4", []},
-  "silverb": {:git, "git://github.com/timCF/silverb.git", "20f61ad039012540c238fad7c70ed61241e98904", []}}
+%{"exactor": {:git, "git://github.com/sasa1977/exactor.git", "0467f8100bc735405d597dbf94996195eb31e0b6", [tag: "0467f8100bc735405d597dbf94996195eb31e0b6"]},
+  "extask": {:git, "git://github.com/timCF/extask.git", "691cc1a515750bead8b81ed6c13cddbcf115d754", []},
+  "exutils": {:git, "git://github.com/timCF/exutils.git", "8a7806419f83656afa4aaf97c595597be9cdc67a", []},
+  "hashex": {:git, "git://github.com/timCF/hashex.git", "cc6b4307daa1ab18c94cdd33bf3cb8a3dab28b96", []},
+  "silverb": {:git, "git://github.com/timCF/silverb.git", "35eec69c198be1308e815ed88116ea0b1e5a3c03", []}}

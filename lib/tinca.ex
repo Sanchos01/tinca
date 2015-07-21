@@ -25,7 +25,7 @@ defmodule Tinca do
   #
 
   def memo(func, args, ttl) do
-    key = {func, args}
+    key = :erlang.term_to_binary({func, args})
     case :ets.lookup(@memo_tab, key) do
       [{^key, {data, _}}] -> data
       [] -> data = :erlang.apply(func, args) 
