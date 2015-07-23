@@ -41,9 +41,7 @@ defmodule TincaTest do
   end
 
   defp trx_func(t) do 
-    IO.inspect(Exutils.make_verbose_datetime)
     :timer.sleep(t)
-    IO.inspect(Exutils.make_verbose_datetime)
     IO.puts("execute once")
   end
   test "trx" do
