@@ -1,16 +1,18 @@
 defmodule Tinca do
   use Application
-  use Silverb, [{"@memo_tab", :__tinca__memo__}]
+  use Silverb, [{"@memo_tab", :__tinca__memo__},{"@trx_tab", :__tinca__trx__},{"@awaiters", :__tinca__awaiters__}]
 
   # See http://elixir-lang.org/docs/stable/elixir/Application.html
   # for more information on OTP Applications
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
     true = (@memo_tab == :ets.new(@memo_tab, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
-
+    true = (@trx_tab == :ets.new(@trx_tab, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
+    :ok = :pg2.create(@awaiters)
     children = [
       # Define workers and child supervisors to be supervised
       # worker(Tinca.Worker, [arg1, arg2, arg3])
+      worker(TincaTrxServer, []),
       worker(Tinca.GC, [])
     ]
 
@@ -24,13 +26,22 @@ defmodule Tinca do
   # public
   #
 
-  def memo(func, args, ttl) do
-    key = {func, args}
+  def memo(func, args, ttl) when is_function(func, length(args)) and is_integer(ttl) and (ttl > 0) do
+    key = %TStructs.MemoKey{func: func, args: args}
     case :ets.lookup(@memo_tab, key) do
-      [{^key, {data, _}}] -> data
+      [{^key, %TStructs.MemoVal{data: data}}] -> data
       [] -> data = :erlang.apply(func, args) 
-            true = :ets.insert(@memo_tab, {key, {data, (Exutils.makestamp + ttl)}})
+            true = :ets.insert(@memo_tab, {key, %TStructs.MemoVal{data: data, delete_after: Exutils.makestamp + ttl}})
             data
+    end
+  end
+
+  def trx(func, roll, args, trx, ttl) when is_function(func, length(args)) and (is_function(roll, length(args)+1) or (roll == nil)) and is_integer(ttl) and (ttl > 0) do
+    k = %TStructs.TrxKey{func: func, roll: roll, args: args, trx: trx}
+    case TincaTrxServer.start_trx(k) do
+      :ok -> TincaTrxServer.do_process(k, ttl)
+      %TStructs.TrxVal{status: :ready, data: data} -> data
+      %TStructs.TrxVal{status: :processing} -> TincaTrxServer.await(k, ttl)
     end
   end
 
@@ -42,7 +53,7 @@ defmodule Tinca do
         end
       end )
     regular_put_func = quote do
-                          def put(value, key, namespace) when ( ( is_atom(key) or is_binary(key) or is_number(key) ) and (namespace in unquote(namespaces))) do
+                          def put(value, key, namespace) when (namespace in unquote(namespaces)) do
                               case table_exist?(namespace) do
                                 true -> true = :ets.insert(namespace, {key,value})
                                         value
@@ -56,7 +67,7 @@ defmodule Tinca do
     regular_get_func = quote do
                           def get([key], namespace), do: get(key, namespace)
                           def get([first|rest], namespace), do: get(first, namespace) |> HashUtils.get(rest)
-                          def get(key, namespace) when ( ( is_atom(key) or is_binary(key) or is_number(key) ) and (namespace in unquote(namespaces))) do
+                          def get(key, namespace) when (namespace in unquote(namespaces)) do
                               case table_exist?(namespace) do
                                 true -> case :ets.lookup(namespace, key) do
                                           [{ _ , data}] -> data
@@ -99,7 +110,7 @@ defmodule Tinca do
                           end
 
     regular_del_func = quote do
-                          def delete(key, namespace) when ( ( is_atom(key) or is_binary(key) or is_number(key) ) and (namespace in unquote(namespaces))) do
+                          def delete(key, namespace) when (namespace in unquote(namespaces)) do
                               case table_exist?(namespace) do
                                 true -> true = :ets.delete(namespace, key)
                                         :ok
@@ -197,13 +208,22 @@ defmodule Tinca do
                 end )
         end
 
-        def memo(func, args, ttl) do
-          key = {func, args}
+        def memo(func, args, ttl) when is_function(func, length(args)) and is_integer(ttl) and (ttl > 0) do
+          key = %TStructs.MemoKey{func: func, args: args}
           case :ets.lookup(@memo_tab, key) do
-            [{^key, {data, _}}] -> data
+            [{^key, %TStructs.MemoVal{data: data}}] -> data
             [] -> data = :erlang.apply(func, args) 
-                  true = :ets.insert(@memo_tab, {key, {data, (Exutils.makestamp + ttl)}})
+                  true = :ets.insert(@memo_tab, {key, %TStructs.MemoVal{data: data, delete_after: Exutils.makestamp + ttl}})
                   data
+          end
+        end
+
+        def trx(func, roll, args, trx, ttl) when is_function(func, length(args)) and (is_function(roll, length(args)+1) or (roll == nil)) and is_integer(ttl) and (ttl > 0) do
+          k = %TStructs.TrxKey{func: func, roll: roll, args: args, trx: trx}
+          case TincaTrxServer.start_trx(k) do
+            :ok -> TincaTrxServer.do_process(k, ttl)
+            %TStructs.TrxVal{status: :ready, data: data} -> data
+            %TStructs.TrxVal{status: :processing} -> TincaTrxServer.await(k, ttl)
           end
         end
 

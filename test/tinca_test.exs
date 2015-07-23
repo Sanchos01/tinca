@@ -40,4 +40,17 @@ defmodule TincaTest do
     assert :ok == Tinca.memo(&IO.puts/1, ["execute two times"], :timer.seconds(5))
   end
 
+  defp trx_func(t) do 
+    IO.inspect(Exutils.make_verbose_datetime)
+    :timer.sleep(t)
+    IO.inspect(Exutils.make_verbose_datetime)
+    IO.puts("execute once")
+  end
+  test "trx" do
+    :ok = Enum.each(1..100000, fn(_) -> spawn_link(fn() -> :timer.sleep(:random.uniform(100)); Tinca.trx(&trx_func/1, nil, [:timer.seconds(15)], 123, :timer.seconds(50)) end) end)
+    :timer.sleep(:timer.seconds(15))
+    assert 1 == :ets.tab2list(:__tinca__trx__) |> length
+    assert :ready == :ets.tab2list(:__tinca__trx__) |> List.first |> elem(1) |> Map.get(:status)
+  end
+
 end
