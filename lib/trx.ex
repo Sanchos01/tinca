@@ -5,68 +5,66 @@ defmodule TincaTrxServer do
 	definit do
 		{:ok, nil}
 	end
-	defcall start_trx(k = %TStructs.TrxKey{}) do
-		case Tinca.get(k) do
-			nil -> 	%TStructs.TrxVal{status: :processing} |> Tinca.put(k)
+	defcall start_trx(trx_key) do
+		case Tinca.get(trx_key) do
+			nil -> 	%TStructs.TrxVal{ready: false} |> Tinca.put(trx_key)
 					{:reply, :ok, nil}
 			val = %TStructs.TrxVal{} -> {:reply, val, nil}
 		end
 	end
 
-	def do_process(k = %TStructs.TrxKey{func: func, args: args}, ttl) do
+
+
+	def do_process(func, roll, trx_key, ttl) do
 		try do
-			data = :erlang.apply(func, args)
-			%TStructs.TrxVal{status: :ready, delete_after: Exutils.makestamp + ttl, data: data} |> Tinca.put(k)
-			:pg2.get_members(@awaiters) |> Stream.uniq |> Enum.each(&( send(&1, %TStructs.TrxProto{subject: :data_is_ready, content: {k, data}}) ))
+			data = func.()
+			%TStructs.TrxVal{ready: true, delete_after: Exutils.makestamp + ttl, data: data} |> Tinca.put(trx_key)
+			:pg2.get_members(@awaiters) |> Stream.uniq |> Enum.each(&( send(&1, %TStructs.TrxProto{subject: :data_is_ready, content: {trx_key, data}}) ))
 			data
 		catch
-			error -> rollback_proc(k, error)
+			error -> rollback_proc(roll, error, trx_key)
 		rescue
-			error -> rollback_proc(k, error)
+			error -> rollback_proc(roll, error, trx_key)
 		end
 	end
-
-	def await(k = %TStructs.TrxKey{func: func, roll: roll, args: args, trx: trx}, ttl) do
-		:ok = :pg2.join(@awaiters, self)
-		case Tinca.get(k) do
-			nil -> 	
-				purge_messages 
-				Tinca.trx(func, roll, args, trx, ttl)
-			%TStructs.TrxVal{status: :ready, data: data} -> 
-				purge_messages
-				data
-			%TStructs.TrxVal{status: :processing} -> 
-				receive do
-					%TStructs.TrxProto{subject: :data_is_ready, content: {^k, data}} -> 
-						purge_messages
-						data
-					%TStructs.TrxProto{subject: :data_exception, content: ^k} -> 
-						purge_messages
-						Tinca.trx(func, roll, args, trx, ttl)
-				end
-		end
-	end
-
-	#
-	#	priv
-	#
-
-	defp rollback_proc(k = %TStructs.TrxKey{roll: roll, args: args}, error) do
+	defp rollback_proc(roll, error, trx_key) do
 		try do
 			case roll do
 				nil -> :ok
-				_ when is_function(roll) -> :erlang.apply(roll, [error|args])
+				_ when is_function(roll,1) -> roll.(error)
 			end
 		catch
 			_ -> :ok
 		rescue
 			_ -> :ok
 		end
-		:ok = Tinca.delete(k)
-		:pg2.get_members(@awaiters) |> Stream.uniq |> Enum.each(&( send(&1, %TStructs.TrxProto{subject: :data_exception, content: k}) ))
+		:ok = Tinca.delete(trx_key)
+		:pg2.get_members(@awaiters) |> Stream.uniq |> Enum.each(&( send(&1, %TStructs.TrxProto{subject: :data_exception, content: trx_key}) ))
 		raise("#{__MODULE__} : exception transaction, rollback was executed. Error #{inspect error}")
 	end
 
+
+
+	def await(func, roll, trx_key, ttl) do
+		:ok = :pg2.join(@awaiters, self)
+		case Tinca.get(trx_key) do
+			nil -> 	
+				:ok = purge_messages 
+				Tinca.trx(func, roll, trx_key, ttl)
+			%TStructs.TrxVal{ready: true, data: data} -> 
+				:ok = purge_messages
+				data
+			%TStructs.TrxVal{ready: false} -> 
+				receive do
+					%TStructs.TrxProto{subject: :data_is_ready, content: {^trx_key, data}} -> 
+						:ok = purge_messages
+						data
+					%TStructs.TrxProto{subject: :data_exception, content: ^trx_key} -> 
+						:ok = purge_messages
+						Tinca.trx(func, roll, trx_key, ttl)
+				end
+		end
+	end
 	defp purge_messages do
 		:ok = :pg2.leave(@awaiters, self)
 		purge_messages_proc
@@ -78,5 +76,7 @@ defmodule TincaTrxServer do
 			10 -> :ok
 		end
 	end
+
+
 
 end

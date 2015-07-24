@@ -7,10 +7,10 @@ defmodule Tinca.GC do
 	end
 	definfo :timeout do
 		now = Exutils.makestamp
-		Tinca.iterate(fn({k = %TStructs.MemoKey{}, %TStructs.MemoVal{delete_after: delete_after}}) -> if (now > delete_after), do: true = :ets.delete(@memo_tab, k) end, @memo_tab)
+		Tinca.iterate(fn({k = %TStructs.MemoKey{}, %TStructs.MemoVal{delete_after: delete_after}}) -> if (now > delete_after), do: :ok = Tinca.delete(k, @memo_tab) end, @memo_tab)
 		Tinca.iterate(fn
-			{%TStructs.TrxKey{}, %TStructs.TrxVal{status: :processing}} -> :ok
-			{k = %TStructs.TrxKey{}, %TStructs.TrxVal{status: :ready, delete_after: delete_after}} -> if (now > delete_after), do: true = :ets.delete(@trx_tab, k)
+			{_, %TStructs.TrxVal{ready: false}} -> :ok
+			{trx_key, %TStructs.TrxVal{ready: true, delete_after: delete_after}} -> if (now > delete_after), do: :ok = Tinca.delete(trx_key, @trx_tab)
 		end, @trx_tab)
 		{:noreply, nil, @ttl}
 	end

@@ -36,12 +36,11 @@ defmodule Tinca do
     end
   end
 
-  def trx(func, roll, args, trx, ttl) when is_function(func, length(args)) and (is_function(roll, length(args)+1) or (roll == nil)) and is_integer(ttl) and (ttl > 0) do
-    k = %TStructs.TrxKey{func: func, roll: roll, args: args, trx: trx}
-    case TincaTrxServer.start_trx(k) do
-      :ok -> TincaTrxServer.do_process(k, ttl)
-      %TStructs.TrxVal{status: :ready, data: data} -> data
-      %TStructs.TrxVal{status: :processing} -> TincaTrxServer.await(k, ttl)
+  def trx(func, roll, trx_key, ttl) when is_function(func, 0) and (is_function(roll, 1) or (roll == nil)) and is_integer(ttl) and (ttl > 0) do
+    case TincaTrxServer.start_trx(trx_key) do
+      :ok -> TincaTrxServer.do_process(func, roll, trx_key, ttl)
+      %TStructs.TrxVal{ready: true, data: data} -> data
+      %TStructs.TrxVal{ready: false} -> TincaTrxServer.await(func, roll, trx_key, ttl)
     end
   end
 
@@ -218,12 +217,11 @@ defmodule Tinca do
           end
         end
 
-        def trx(func, roll, args, trx, ttl) when is_function(func, length(args)) and (is_function(roll, length(args)+1) or (roll == nil)) and is_integer(ttl) and (ttl > 0) do
-          k = %TStructs.TrxKey{func: func, roll: roll, args: args, trx: trx}
-          case TincaTrxServer.start_trx(k) do
-            :ok -> TincaTrxServer.do_process(k, ttl)
-            %TStructs.TrxVal{status: :ready, data: data} -> data
-            %TStructs.TrxVal{status: :processing} -> TincaTrxServer.await(k, ttl)
+        def trx(func, roll, trx_key, ttl) when is_function(func, 0) and (is_function(roll, 1) or (roll == nil)) and is_integer(ttl) and (ttl > 0) do
+          case TincaTrxServer.start_trx(trx_key) do
+            :ok -> TincaTrxServer.do_process(func, roll, trx_key, ttl)
+            %TStructs.TrxVal{ready: true, data: data} -> data
+            %TStructs.TrxVal{ready: false} -> TincaTrxServer.await(func, roll, trx_key, ttl)
           end
         end
 

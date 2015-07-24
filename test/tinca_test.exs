@@ -40,15 +40,17 @@ defmodule TincaTest do
     assert :ok == Tinca.memo(&IO.puts/1, ["execute two times"], :timer.seconds(5))
   end
 
-  defp trx_func(t) do 
-    :timer.sleep(t)
-    IO.puts("execute once")
-  end
+  @trx_exec :timer.seconds(15)
+  defp trx_func, do: (:timer.sleep(@trx_exec); IO.puts("execute once"); 321) 
+  @tag timeout: 300000
   test "trx" do
-    :ok = Enum.each(1..100000, fn(_) -> spawn_link(fn() -> :timer.sleep(:random.uniform(100)); Tinca.trx(&trx_func/1, nil, [:timer.seconds(15)], 123, :timer.seconds(50)) end) end)
-    :timer.sleep(:timer.seconds(15))
+    :ok = Enum.each(1..10000, fn(_) -> spawn_link(fn() -> :random.uniform(100) |> :timer.sleep; 321 = Tinca.trx(&trx_func/0, nil, 123, :timer.seconds(50)) end) end)
+    :timer.sleep(@trx_exec)
     assert 1 == :ets.tab2list(:__tinca__trx__) |> length
-    assert :ready == :ets.tab2list(:__tinca__trx__) |> List.first |> elem(1) |> Map.get(:status)
+    assert true == :ets.tab2list(:__tinca__trx__) |> List.first |> elem(1) |> Map.get(:ready)
+    assert 321 == Tinca.trx(&trx_func/0, nil, 123, :timer.seconds(99999999999))
+    :timer.sleep(:timer.seconds(51))
+    assert [] == :ets.tab2list(:__tinca__trx__)
   end
 
 end
