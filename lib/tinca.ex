@@ -1,11 +1,17 @@
 defmodule Tinca do
   use Application
-  use Silverb, [{"@memo_tab", :__tinca__memo__},{"@trx_tab", :__tinca__trx__},{"@awaiters", :__tinca__awaiters__}]
+  use Silverb,  [
+                  {"@memo_tab", :__tinca__memo__},
+                  {"@trx_tab", :__tinca__trx__},
+                  {"@weak_links_tab", :__tinca__weak__links__},
+                  {"@awaiters", :__tinca__awaiters__}
+                ]
 
   # See http://elixir-lang.org/docs/stable/elixir/Application.html
   # for more information on OTP Applications
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
+    true = (@weak_links_tab == :ets.new(@weak_links_tab, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
     true = (@memo_tab == :ets.new(@memo_tab, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
     true = (@trx_tab == :ets.new(@trx_tab, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
     :ok = :pg2.create(@awaiters)
@@ -25,6 +31,11 @@ defmodule Tinca do
   #
   # public
   #
+
+  defmodule WeakLinks do
+    def make(val1, val2, ttl), do: TWeakLinks.make(val1, val2, ttl)
+    def get(val), do: TWeakLinks.get(val)
+  end
 
   def memo(func, args, ttl) when is_function(func, length(args)) and is_integer(ttl) and (ttl > 0) do
     key = %TStructs.MemoKey{func: func, args: args}
@@ -223,6 +234,11 @@ defmodule Tinca do
             %TStructs.TrxVal{ready: true, data: data} -> data
             %TStructs.TrxVal{ready: false} -> TincaTrxServer.await(func, roll, trx_key, ttl)
           end
+        end
+
+        defmodule WeakLinks do
+          def make(val1, val2, ttl), do: TWeakLinks.make(val1, val2, ttl)
+          def get(val), do: TWeakLinks.get(val)
         end
 
         ###############

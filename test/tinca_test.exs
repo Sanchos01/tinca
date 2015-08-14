@@ -53,4 +53,16 @@ defmodule TincaTest do
     assert [] == :ets.tab2list(:__tinca__trx__)
   end
 
+  test "weak_links" do
+    val1 = "hello, world"
+    val2 = Exutils.md5_str(val1)
+    assert val1 == Tinca.WeakLinks.make(val1,val2,10000)
+    assert val1 == Tinca.WeakLinks.get(val2)
+    assert val2 == Tinca.WeakLinks.get(val1)
+    :timer.sleep(11000)
+    assert nil == Tinca.WeakLinks.get(val2)
+    assert nil == Tinca.WeakLinks.get(val1)
+    assert [] == :ets.tab2list(:__tinca__weak__links__)
+  end
+
 end
