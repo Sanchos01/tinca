@@ -9,10 +9,10 @@ defmodule TWeakLinks do
 		val1
 	end
 
-	def get(val) do
+	def get(val, default \\ nil) do
 		case Tinca.get(val) do
-			nil -> nil
 			%TStructs.MemoVal{data: data} -> data
+			nil -> default
 		end
 	end
 

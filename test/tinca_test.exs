@@ -39,7 +39,7 @@ defmodule TincaTest do
     :timer.sleep(:timer.seconds(6))
     assert :ok == Tinca.memo(&IO.puts/1, ["execute two times"], :timer.seconds(5))
   end
-
+  
   @trx_exec :timer.seconds(15)
   defp trx_func, do: (:timer.sleep(@trx_exec); IO.puts("execute once"); 321) 
   @tag timeout: 300000
@@ -56,12 +56,20 @@ defmodule TincaTest do
   test "weak_links" do
     val1 = "hello, world"
     val2 = Exutils.md5_str(val1)
-    assert val1 == Tinca.WeakLinks.make(val1,val2,10000)
+    assert val1 == Tinca.WeakLinks.make(val1,val2,2000)
     assert val1 == Tinca.WeakLinks.get(val2)
     assert val2 == Tinca.WeakLinks.get(val1)
-    :timer.sleep(11000)
+    assert val1 == Tinca.WeakLinks.get(val2, val2)
+    assert val1 == Tinca.WeakLinks.get(val2,"hello")
+    assert val2 == Tinca.WeakLinks.get(val1, val1)
+    assert val2 == Tinca.WeakLinks.get(val1,"hello")
+    :timer.sleep(3000)
     assert nil == Tinca.WeakLinks.get(val2)
     assert nil == Tinca.WeakLinks.get(val1)
+    assert val2 == Tinca.WeakLinks.get(val2, val2)
+    assert "hello" == Tinca.WeakLinks.get(val2,"hello")
+    assert val1 == Tinca.WeakLinks.get(val1, val1)
+    assert "hello" == Tinca.WeakLinks.get(val1,"hello")
     assert [] == :ets.tab2list(:__tinca__weak__links__)
   end
 
