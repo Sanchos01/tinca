@@ -42,11 +42,22 @@ defmodule Tinca do
     key = %TStructs.MemoKey{func: func, args: args}
     case :ets.lookup(@memo_tab, key) do
       [{^key, %TStructs.MemoVal{data: data}}] -> data
-      [] -> data = :erlang.apply(func, args) 
+      [] -> data = :erlang.apply(func, args)
             true = :ets.insert(@memo_tab, {key, %TStructs.MemoVal{data: data, delete_after: Exutils.makestamp + ttl}})
             data
     end
   end
+
+	def smart_memo(func, args, pred, ttl) when is_function(func, length(args)) and is_function(pred,1) and is_integer(ttl) and (ttl > 0) do
+		key = %TStructs.MemoKey{func: func, args: args}
+		case :ets.lookup(@memo_tab, key) do
+			[{^key, %TStructs.MemoVal{data: data}}] -> data
+			[] ->
+				data = :erlang.apply(func, args)
+				if (pred.(data)), do: (true = :ets.insert(@memo_tab, {key, %TStructs.MemoVal{data: data, delete_after: Exutils.makestamp + ttl}}))
+				data
+		end
+	end
 
   def trx(func, roll, trx_key, ttl) when is_function(func, 0) and (is_function(roll, 1) or (roll == nil)) and is_integer(ttl) and (ttl > 0) do
     case TincaTrxServer.start_trx(trx_key) do
@@ -57,7 +68,7 @@ defmodule Tinca do
   end
 
   defmacro __using__(namespaces) when is_list(namespaces) do
-    Enum.each(namespaces, 
+    Enum.each(namespaces,
       fn(namespace) ->
         if not(is_atom(namespace)) do
           raise "Tinca : can't create table #{inspect namespace}, namespace must be atom!"
@@ -202,7 +213,7 @@ defmodule Tinca do
       defmodule Tinca do
 
         use Silverb, [{"@memo_tab", :__tinca__memo__}]
-        
+
         ###############
         ### public ####
         ###############
@@ -223,11 +234,22 @@ defmodule Tinca do
           key = %TStructs.MemoKey{func: func, args: args}
           case :ets.lookup(@memo_tab, key) do
             [{^key, %TStructs.MemoVal{data: data}}] -> data
-            [] -> data = :erlang.apply(func, args) 
+            [] -> data = :erlang.apply(func, args)
                   true = :ets.insert(@memo_tab, {key, %TStructs.MemoVal{data: data, delete_after: Exutils.makestamp + ttl}})
                   data
           end
         end
+
+		def smart_memo(func, args, pred, ttl) when is_function(func, length(args)) and is_function(pred,1) and is_integer(ttl) and (ttl > 0) do
+			key = %TStructs.MemoKey{func: func, args: args}
+			case :ets.lookup(@memo_tab, key) do
+				[{^key, %TStructs.MemoVal{data: data}}] -> data
+				[] ->
+					data = :erlang.apply(func, args)
+					if (pred.(data)), do: (true = :ets.insert(@memo_tab, {key, %TStructs.MemoVal{data: data, delete_after: Exutils.makestamp + ttl}}))
+					data
+			end
+		end
 
         def trx(func, roll, trx_key, ttl) when is_function(func, 0) and (is_function(roll, 1) or (roll == nil)) and is_integer(ttl) and (ttl > 0) do
           case TincaTrxServer.start_trx(trx_key) do

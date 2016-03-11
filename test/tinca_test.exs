@@ -37,11 +37,12 @@ defmodule TincaTest do
     :ok = Tinca.memo(&IO.puts/1, ["execute two times"], :timer.seconds(5))
     Enum.each(0..100, fn(_) -> :ok = Tinca.memo(&IO.puts/1, ["execute two times"], :timer.seconds(5)) end)
     :timer.sleep(:timer.seconds(6))
+	Enum.each(0..10, fn(_) -> Tinca.smart_memo(&(:random.uniform(&1)), [100], &(rem(&1,2) == 0), :timer.seconds(5)) |> IO.puts end)
     assert :ok == Tinca.memo(&IO.puts/1, ["execute two times"], :timer.seconds(5))
   end
-  
+
   @trx_exec :timer.seconds(15)
-  defp trx_func, do: (:timer.sleep(@trx_exec); IO.puts("execute once"); 321) 
+  defp trx_func, do: (:timer.sleep(@trx_exec); IO.puts("execute once"); 321)
   @tag timeout: 300000
   test "trx" do
     :ok = Enum.each(1..10000, fn(_) -> spawn_link(fn() -> :random.uniform(100) |> :timer.sleep; 321 = Tinca.trx(&trx_func/0, nil, 123, :timer.seconds(50)) end) end)

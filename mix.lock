@@ -2,4 +2,4 @@
   "extask": {:git, "git://github.com/timCF/extask.git", "691cc1a515750bead8b81ed6c13cddbcf115d754", []},
   "exutils": {:git, "git://github.com/timCF/exutils.git", "8a7806419f83656afa4aaf97c595597be9cdc67a", []},
   "hashex": {:git, "git://github.com/timCF/hashex.git", "cc6b4307daa1ab18c94cdd33bf3cb8a3dab28b96", []},
-  "silverb": {:git, "git://github.com/timCF/silverb.git", "35eec69c198be1308e815ed88116ea0b1e5a3c03", []}}
+  "silverb": {:git, "https://github.com/timCF/silverb.git", "35eec69c198be1308e815ed88116ea0b1e5a3c03", []}}
