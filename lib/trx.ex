@@ -48,18 +48,22 @@ defmodule TincaTrxServer do
 	def await(func, roll, trx_key, ttl) do
 		:ok = :pg2.join(@awaiters, self)
 		case Tinca.get(trx_key) do
-			nil -> 	
-				:ok = purge_messages 
+			nil ->
+				:ok = purge_messages
 				Tinca.trx(func, roll, trx_key, ttl)
-			%TStructs.TrxVal{ready: true, data: data} -> 
+			%TStructs.TrxVal{ready: true, data: data} ->
 				:ok = purge_messages
 				data
-			%TStructs.TrxVal{ready: false} -> 
+			%TStructs.TrxVal{ready: false} ->
 				receive do
-					%TStructs.TrxProto{subject: :data_is_ready, content: {^trx_key, data}} -> 
+					%TStructs.TrxProto{subject: :data_is_ready, content: {^trx_key, data}} ->
 						:ok = purge_messages
 						data
-					%TStructs.TrxProto{subject: :data_exception, content: ^trx_key} -> 
+					%TStructs.TrxProto{subject: :data_exception, content: ^trx_key} ->
+						:ok = purge_messages
+						Tinca.trx(func, roll, trx_key, ttl)
+				after
+					ttl ->
 						:ok = purge_messages
 						Tinca.trx(func, roll, trx_key, ttl)
 				end
