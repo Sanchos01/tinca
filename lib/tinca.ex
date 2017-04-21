@@ -34,6 +34,7 @@ defmodule Tinca do
 
   defmodule WeakLinks do
     def make(val1, val2, ttl), do: TWeakLinks.make(val1, val2, ttl)
+    def make_injection(val1, val2, ttl), do: TWeakLinks.make_injection(val1, val2, ttl)
     def get(val), do: TWeakLinks.get(val)
     def get(val, default), do: TWeakLinks.get(val, default)
   end
@@ -261,6 +262,7 @@ defmodule Tinca do
 
         defmodule WeakLinks do
           def make(val1, val2, ttl), do: TWeakLinks.make(val1, val2, ttl)
+          def make_injection(val1, val2, ttl), do: TWeakLinks.make_injection(val1, val2, ttl)
           def get(val), do: TWeakLinks.get(val)
           def get(val, default), do: TWeakLinks.get(val, default)
         end
