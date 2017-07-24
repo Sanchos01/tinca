@@ -11,9 +11,9 @@ defmodule Tinca do
   # for more information on OTP Applications
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
-    true = (@weak_links_tab == :ets.new(@weak_links_tab, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
-    true = (@memo_tab == :ets.new(@memo_tab, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
-    true = (@trx_tab == :ets.new(@trx_tab, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
+    true = (@weak_links_tab == :ets.new(@weak_links_tab, [:public, :named_table, :set]))
+    true = (@memo_tab == :ets.new(@memo_tab, [:public, :named_table, :set]))
+    true = (@trx_tab == :ets.new(@trx_tab, [:public, :named_table, :set]))
     :ok = :pg2.create(@awaiters)
     children = [
       # Define workers and child supervisors to be supervised
@@ -272,7 +272,7 @@ defmodule Tinca do
         ###############
 
         defp create_table(namespace) do
-          true = (namespace == :ets.new(namespace, [:public, :named_table, :ordered_set, {:write_concurrency, true}, {:read_concurrency, true}, :protected]))
+          true = (namespace == :ets.new(namespace, [:public, :named_table, :set]))
         end
         defp table_exist?(namespace) do
           :ets.info(namespace) != :undefined
