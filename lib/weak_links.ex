@@ -22,6 +22,14 @@ defmodule TWeakLinks do
 		end
 	end
 
+	def update(func, key, ttl) when is_function(func) do
+		case Tinca.get(key) do
+			%TStructs.MemoVal{data: data, delete_after: old_ttl} ->
+				Tinca.put(%TStructs.MemoVal{data: new_value = func.(data), delete_after: old_ttl}, key)
+				new_value
+			_ -> make_injection(func.(0), key, ttl)
+		end
+	end
 	def update(value, key, ttl) do
 		case Tinca.get(key) do
 			%TStructs.MemoVal{delete_after: old_ttl} ->
